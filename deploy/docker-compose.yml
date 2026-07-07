@@ -1,0 +1,148 @@
+name: agentx
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: agentx-postgres
+    profiles:
+      - localdb
+    environment:
+      POSTGRES_DB: ${DB_NAME:-agentx}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      TZ: Asia/Shanghai
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-agentx}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: agentx-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+      TZ: Asia/Shanghai
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.backend
+    container_name: agentx-backend
+    environment:
+      SERVER_PORT: 8088
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-agentx}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      AGENTX_ADMIN_EMAIL: ${AGENTX_ADMIN_EMAIL:-admin@agentx.local}
+      AGENTX_ADMIN_PASSWORD: ${AGENTX_ADMIN_PASSWORD:-admin123}
+      AGENTX_ADMIN_NICKNAME: ${AGENTX_ADMIN_NICKNAME:-AgentX Admin}
+      AGENTX_TEST_ENABLED: ${AGENTX_TEST_ENABLED:-true}
+      AGENTX_TEST_EMAIL: ${AGENTX_TEST_EMAIL:-test@agentx.local}
+      AGENTX_TEST_PASSWORD: ${AGENTX_TEST_PASSWORD:-test123}
+      AGENTX_TEST_NICKNAME: ${AGENTX_TEST_NICKNAME:-Test User}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      FILE_STORAGE_PATH: /app/storage
+      HIGH_AVAILABILITY_ENABLED: ${HIGH_AVAILABILITY_ENABLED:-false}
+      HIGH_AVAILABILITY_GATEWAY_URL: ${HIGH_AVAILABILITY_GATEWAY_URL:-}
+      HIGH_AVAILABILITY_API_KEY: ${HIGH_AVAILABILITY_API_KEY:-}
+      GITHUB_REPO_NAME: ${GITHUB_REPO_NAME:-agent-mcp-community}
+      GITHUB_USERNAME: ${GITHUB_USERNAME:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      MAIL_SMTP_HOST: ${MAIL_SMTP_HOST:-}
+      MAIL_SMTP_PORT: ${MAIL_SMTP_PORT:-587}
+      MAIL_SMTP_USERNAME: ${MAIL_SMTP_USERNAME:-}
+      MAIL_SMTP_PASSWORD: ${MAIL_SMTP_PASSWORD:-}
+      SILICONFLOW_API_KEY: ${SILICONFLOW_API_KEY:-}
+      SILICONFLOW_API_URL_RERANK: ${SILICONFLOW_API_URL_RERANK:-}
+      ALIPAY_APP_ID: ${ALIPAY_APP_ID:-}
+      ALIPAY_PRIVATE_KEY: ${ALIPAY_PRIVATE_KEY:-}
+      ALIPAY_PUBLIC_KEY: ${ALIPAY_PUBLIC_KEY:-}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      PAYMENT_CALLBACK_BASE_URL: ${PAYMENT_CALLBACK_BASE_URL:-http://localhost:8088/api}
+      PAYMENT_SUCCESS_URL: ${PAYMENT_SUCCESS_URL:-http://localhost:3000/settings/billing?payment=success}
+      PAYMENT_CANCEL_URL: ${PAYMENT_CANCEL_URL:-http://localhost:3000/settings/billing?payment=cancel}
+      AGENTX_CONTAINER_DOCKER_HOST: ${AGENTX_CONTAINER_DOCKER_HOST:-unix:///var/run/docker.sock}
+      AGENTX_CONTAINER_USER_VOLUME_PATH: ${AGENTX_CONTAINER_USER_VOLUME_PATH:-/docker/users}
+      AGENTX_CONTAINER_DEFAULT_MCP_IMAGE: ${AGENTX_CONTAINER_DEFAULT_MCP_IMAGE:-ghcr.io/lucky-aeon/mcp-gateway:latest}
+      TZ: Asia/Shanghai
+      JAVA_OPTS: ${JAVA_OPTS:--Xms512m -Xmx1024m -XX:+UseG1GC}
+    ports:
+      - "${BACKEND_PORT:-8088}:8088"
+    volumes:
+      - backend-storage:/app/storage
+      - backend-logs:/app/logs
+      - user-containers:/docker/users
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8088/api}
+    container_name: agentx-frontend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8088/api}
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      TZ: Asia/Shanghai
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  adminer:
+    image: adminer:4-standalone
+    container_name: agentx-adminer
+    profiles:
+      - tools
+    ports:
+      - "${ADMINER_PORT:-8082}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
+  backend-storage:
+  backend-logs:
+  user-containers:
