@@ -80,17 +80,17 @@ mail:
   smtp:
     host: ${MAIL_SMTP_HOST:smtp.qq.com}
     port: ${MAIL_SMTP_PORT:587}
-    username: ${MAIL_SMTP_USERNAME:3362690944@qq.com}
-    password: ${MAIL_SMTP_PASSWORD:ajtgebgpdrrucifd}
+    username: ${MAIL_SMTP_USERNAME:}
+    password: ${MAIL_SMTP_PASSWORD:}
   verification:
     template: ${MAIL_VERIFICATION_TEMPLATE:您的验证码是:%s，有效期10分钟，请勿泄露给他人。}
     subject: ${MAIL_VERIFICATION_SUBJECT:AgentX - 邮箱验证码}
 
 github:
   target:
-    repo-name: ${GITHUB_REPO_NAME:agent-mcp-community}
-    username: ${GITHUB_USERNAME:314159first}
-    token: ${GITHUB_TOKEN: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}
+    repo-name: ${GITHUB_REPO_NAME:}
+    username: ${GITHUB_USERNAME:}
+    token: ${GITHUB_TOKEN:}
 
 # 高可用网关配置
 high-availability:
@@ -106,7 +106,7 @@ embedding:
     host: ${VECTOR_DB_HOST:${DB_HOST:localhost}}
     port: ${VECTOR_DB_PORT:${DB_PORT:5432}}
     user: ${VECTOR_DB_USER:${DB_USER:postgres}}
-    password: ${VECTOR_DB_PASSWORD:${DB_PASSWORD:123456}}
+    password: ${VECTOR_DB_PASSWORD:${DB_PASSWORD:}}
     database: ${VECTOR_DB_NAME:${DB_NAME:agentx}}
     table: ${VECTOR_DB_TABLE:public.vector_store}
     dimension: ${VECTOR_DB_DIMENSION:1024}
@@ -163,12 +163,12 @@ dromara:
         base-path: ${oss.base-path:agentx/}
 
 oss:
-  endpoint: https://oss-cn-beijing.aliyuncs.com
-  custom-domain: https://agentresource.oss-cn-beijing.aliyuncs.com/
-  bucket-name: agentresource
-  region: cn-beijing
-  url-prefix: https://agentresource.oss-cn-beijing.aliyuncs.com/
-  base-path: agentx/
+  endpoint: 
+  custom-domain: 
+  bucket-name:
+  region: 
+  url-prefix: 
+  base-path: agentx
 
 payment:
   alipay:
@@ -190,7 +190,7 @@ agentx:
   container:
     docker-host: ${AGENTX_CONTAINER_DOCKER_HOST:unix:///var/run/docker.sock}
     user-volume-base-path: ${AGENTX_CONTAINER_USER_VOLUME_PATH:/docker/users}
-    default-mcp-gateway-image: ${AGENTX_CONTAINER_DEFAULT_MCP_IMAGE:ghcr.io/lucky-aeon/mcp-gateway:latest}
+    default-mcp-gateway-image: ${}
     monitor-interval: ${AGENTX_CONTAINER_MONITOR_INTERVAL:300000}
     stats-update-interval: ${AGENTX_CONTAINER_STATS_INTERVAL:120000}
 mcp:
