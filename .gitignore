@@ -179,3 +179,12 @@ next-env.d.ts
 # Local nested tool repositories and temporary workspaces
 mcp_tools/
 tmp-mcp-vm/
+
+# Local documents, resumes, reports and slide decks
+*.doc
+*.docx
+*.pdf
+*.ppt
+*.pptx
+~$*
+_report_media_tmp/
